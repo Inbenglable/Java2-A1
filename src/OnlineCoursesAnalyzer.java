@@ -3,7 +3,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.DoubleStream;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -47,36 +49,174 @@ public class OnlineCoursesAnalyzer {
 
     //1
     public Map<String, Integer> getPtcpCountByInst() {
-
-        return null;
+        return  courses.stream().
+            collect(Collectors.groupingBy
+                (a->a.institution,Collectors.summingInt(a->a.participants)));
     }
 
+    class two{
+        String name;
+        Integer value;
+        public two(String institution, String subject, Integer count){
+            name=String.format("%s-%s",institution,subject);
+            value=count;
+        }
+    }
     //2
     public Map<String, Integer> getPtcpCountByInstAndSubject() {
-        return null;
+        Map<String,Integer> temp=courses.stream().map(a->new two(a.institution,a.subject,a.participants))
+            .collect(Collectors.groupingBy(a->a.name,Collectors.summingInt(b->b.value)));
+        List<Map.Entry<String,Integer>> temp2= new ArrayList<>(temp.entrySet());
+        Collections.sort(temp2,(b,a)->{
+            if (a.getValue()!=b.getValue()){
+                return a.getValue()-b.getValue();}
+            else{
+                return b.getKey().compareTo(a.getKey());
+            }
+        });
+        LinkedHashMap<String,Integer> temp3=new LinkedHashMap<String,Integer>();
+        temp2.forEach(a->temp3.put(a.getKey(),a.getValue()));
+        return temp3;
     }
 
+    class three{
+        String[] instructors;
+        String title;
+        public three(String[] instr,String title ){
+            this.title=title;
+            instructors=instr;
+        }
+    }
     //3
     public Map<String, List<List<String>>> getCourseListOfInstructor() {
-        return null;
+       List<three> temp=courses.stream().map(a->new three(a.instructors.split(", "),a.title)).collect(Collectors.toList());
+        Map<String, List<HashSet<String>>> temp1=new HashMap<>();
+        for (three x:temp){
+            if (x.instructors.length>1){
+                for (String m:x.instructors){
+                    if (!temp1.containsKey(m)){
+                        List<HashSet<String>> a=new ArrayList<>();
+                        a.add(new HashSet<String>());
+                        a.add(new HashSet<String>());
+                        a.get(1).add(x.title);
+                        temp1.put(m,a);
+                    }
+                    else{
+                        temp1.get(m).get(1).add(x.title);
+                    }
+                }
+            }
+            else if (x.instructors.length==1){
+                if (!temp1.containsKey(x.instructors[0])){
+                    List<HashSet<String>> a=new ArrayList<>();
+                    a.add(new HashSet<String>());
+                    a.add(new HashSet<String>());
+                    a.get(0).add(x.title);
+                    temp1.put(x.instructors[0],a);
+                }
+                else{
+                    temp1.get(x.instructors[0]).get(0).add(x.title);
+                }
+            }
+        }
+       Map<String, List<List<String>>> temp2=new HashMap<>();
+        Iterator<String> it=temp1.keySet().iterator();
+        while(it.hasNext()){
+            String key=it.next();
+            List<List<String>> a=new ArrayList<>();
+            a.add(new ArrayList<>(temp1.get(key).get(0)));
+            a.add(new ArrayList<>(temp1.get(key).get(1)));
+            temp2.put(key,a);
+        }
+      for (String x:temp2.keySet()){
+          temp2.get(x).get(0).sort((b,a)->b.compareTo(a));
+          temp2.get(x).get(1).sort((b,a)->b.compareTo(a));
+      }
+        return temp2;
     }
 
     //4
     public List<String> getCourses(int topK, String by) {
-        return null;
+        List<String> ans;
+        if (by.equals("hours")){
+           ans=courses.stream().sorted(
+               (a,b)-> {
+                   if (b.totalHours!=a.totalHours)return (int) (b.totalHours-a.totalHours);
+                   else return a.title.compareTo(b.title);
+           }).map(a->a.title).distinct().collect(Collectors.toList());
+        }
+        else{
+            ans=courses.stream().sorted(
+                (a,b)-> {
+                    if (b.participants!=a.participants)return (int) (b.participants-a.participants);
+                    else return a.title.compareTo(b.title);
+                }).map(a->a.title).distinct().collect(Collectors.toList());
+        }
+        return ans.subList(0,topK);
+
     }
 
     //5
     public List<String> searchCourses(String courseSubject, double percentAudited, double totalCourseHours) {
-        return null;
+        return courses.stream().filter(a->a.percentAudited>=percentAudited&&a.totalHours<=totalCourseHours&&
+                a.subject.toLowerCase().contains(courseSubject.toLowerCase())).map(a->a.title)
+            .distinct().sorted((a,b)->a.compareTo(b)).toList();
     }
-
+    class Six{
+        Date date;
+        String name;
+        public Six(Date date,String name){
+            this.date=date;
+            this.name=name;
+        }
+    }
     //6
     public List<String> recommendCourses(int age, int gender, int isBachelorOrHigher) {
-        return null;
+        HashMap<String,Six> latestNum = new HashMap<>();
+     courses.forEach(a->latestNum.merge(a.number,new Six(a.launchDate,a.title),(b,c)-> {
+         if (b.date.compareTo(c.date)<0) {
+             return c;
+         }
+         else{
+             return b;
+         }
+         //.filter(a->latestNum.get(a.number).name.equals(a.title))
+     }));//得到对每一个number，日期最远的课程
+    Map<String, Double> avgAge= courses.stream().
+         collect(Collectors.groupingBy(a->a.number,Collectors.averagingDouble(a->a.medianAge)));
+    Map<String, Double> avgPerMale=courses.stream().
+        collect(Collectors.groupingBy(a->a.number,Collectors.averagingDouble(a->a.percentMale)));
+        Map<String, Double> avgPerDegree=courses.stream().
+            collect(Collectors.groupingBy(a->a.number,Collectors.averagingDouble(a->a.percentDegree)));
+
+        Iterator<String> it=avgAge.keySet().iterator();
+        Map<String,Double> temp=new HashMap<>();
+        while (it.hasNext()){
+            String key=it.next();
+            Double value=Math.pow((age-avgAge.get(key)),2)+Math.pow((gender*100-avgPerMale.get(key)),2)
+                +Math.pow((isBachelorOrHigher*100-avgPerDegree.get(key)),2);
+//            if (latestNum.get(key).name.equals("Data Analysis for Genomics: Matrix Algebra and Linear Models")||
+//                latestNum.get(key).name.equals("Effective Field Theory") ){
+//                System.out.println(latestNum.get(key).name);
+//                System.out.println(avgAge.get(key));
+//                System.out.println(avgPerMale.get(key));
+//                System.out.println(avgPerDegree.get(key));
+//                System.out.println(age);
+//                System.out.println(gender*100);
+//                System.out.println(isBachelorOrHigher*100);
+//                System.out.println(value);
+//            }
+            temp.merge(latestNum.get(key).name,value,(a,b)-> a<b? a:b);
+//            temp.put(key,value);
+        }
+        return temp.entrySet().stream().sorted((a,b)-> {
+            if (a.getValue() != b.getValue()) return (int) (a.getValue()-b.getValue());
+            else return a.getKey().compareTo(b.getKey());
+        } ).map(a->a.getKey()).distinct().toList().subList(0,10);
     }
 
 }
+
 
 class Course {
     String institution;
