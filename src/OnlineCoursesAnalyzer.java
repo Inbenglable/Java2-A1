@@ -170,7 +170,7 @@ public class OnlineCoursesAnalyzer {
 
   //5
   public List<String> searchCourses(String courseSubject, double percentAudited,
-      double totalCourseHours) {
+                                    double totalCourseHours) {
     return courses.stream()
         .filter(a -> a.percentAudited >= percentAudited && a.totalHours <= totalCourseHours
             && a.subject.toLowerCase().contains(courseSubject.toLowerCase())).map(a -> a.title)
@@ -256,14 +256,14 @@ class Course {
   double percentDegree;
 
   public Course(String institution, String number, Date launchDate,
-      String title, String instructors, String subject,
-      int year, int honorCode, int participants,
-      int audited, int certified, double percentAudited,
-      double percentCertified, double percentCertified50,
-      double percentVideo, double percentForum, double gradeHigherZero,
-      double totalHours, double medianHoursCertification,
-      double medianAge, double percentMale, double percentFemale,
-      double percentDegree) {
+                String title, String instructors, String subject,
+                int year, int honorCode, int participants,
+                int audited, int certified, double percentAudited,
+                double percentCertified, double percentCertified50,
+                double percentVideo, double percentForum, double gradeHigherZero,
+                double totalHours, double medianHoursCertification,
+                double medianAge, double percentMale, double percentFemale,
+                double percentDegree) {
     this.institution = institution;
     this.number = number;
     this.launchDate = launchDate;
